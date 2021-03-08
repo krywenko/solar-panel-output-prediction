@@ -1,0 +1,4 @@
+#!/bin/bash
+awk -F "," '{ print $3 }' $1 |sed '1d' |gnuplot -p -e 'plot "/dev/stdin" w lp '
+
+

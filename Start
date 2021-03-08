@@ -1,0 +1,24 @@
+#!/bin/bash
+  date
+  echo Starting  OpenWeather 
+  ./OpenW
+  echo Finished ------------------------------------------------------------------------------
+  sleep 5
+  echo Starting weatherbit
+  ./WBIT
+  echo Finished ------------------------------------------------------------------------------
+  sleep 5
+  echo Starting Visual Crossing
+  ./Viscross
+  echo Finished ------------------------------------------------------------------------------
+  sleep 5 
+  echo Starting weather API
+  ./W_API
+  echo Finished ------------------------------------------------------------------------------
+  sleep 5
+  echo Starting ClimaCell
+  ./CLIMACELL
+    sleep 5
+  echo Starting Aeris
+  ./Aeris
+  echo Finished all ============================================================================
