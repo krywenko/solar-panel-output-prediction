@@ -7,7 +7,7 @@ OpenWeather,Climacel,Weather-API, Weatherbit, VisualCrossing, and Aeris.  it fai
 
 you will need to install pysolar , lynx and bc
 
-pysolar  canc be isnstall vis pip install pysolar
+pysolar  can be install vis pip install pysolar
 and lynx and bc  through your basic apt install method.
 
 it configured to work with collectd-mqtt that sends it to influxdb to generate graphs or graphs viable in collectd interface . it also generales a CSV  so you can import it in other databases 
