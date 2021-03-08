@@ -18,5 +18,9 @@ the second file to configure is the panelconf  this helps calculates the power p
 
 it also has a simple tool called graph  using gnuplot  to generate a simple graph   usage is : graph W_API.csv to see predicted power production from the weather api csv
 
+ example below
 ![graph csv](https://github.com/krywenko/solar-panel-output-prediction/blob/main/predictive2.png)
+
+Graphing in Chronograf
+![ChronoGraf](https://your-copied-image-address)
 
