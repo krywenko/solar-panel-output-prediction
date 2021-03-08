@@ -21,6 +21,8 @@ it also has a simple tool called graph  using gnuplot  to generate a simple grap
  example below
 ![graph csv](https://github.com/krywenko/solar-panel-output-prediction/blob/main/predictive2.png)
 
-Graphing in Chronograf
-![ChronoGraf](https://your-copied-image-address)
+Graphing in Chronograf - you notice that different  apis gave different  cloudcover prediction as with air visablity hence  why the graph is slightly different than the actual  predicted cloud cover 
+![ChronoGraf](https://github.com/krywenko/solar-panel-output-prediction/blob/main/predictive3.png)
+
+for me  weather API   and weatherbit are the  most consistanly accurate. but I live in a fairly remote regions that are not generally covered that well by most weather API services .  you can generate  higher accuracy by combining  several  api out puts into one  or  taking  sample from several different  gps  location close to you IE 5km  away from you  and combining into on graph out put 
 
