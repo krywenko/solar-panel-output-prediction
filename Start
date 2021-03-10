@@ -1,5 +1,5 @@
-#!/bin/bash
   date
+  cd $HOME/solar_NEW2
   echo Starting  OpenWeather 
   ./OpenW
   echo Finished ------------------------------------------------------------------------------

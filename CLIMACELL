@@ -5,37 +5,37 @@ API= #clima api key
 P_offset=1  # either 0 no offset or 1 30 minute offset
 Wm2=1000  # maxium solar potential
 ACO=0.80     # average cloud opacitity 0.6 - 0.9 
+
+MQTT=192.168.168.251
+c=0
+
 JSON=$(lynx -dump "https://api.climacell.co/v3/weather/forecast/hourly?lat=$LAT&lon=$LON&unit_system=si&start_time=now&fields=surface_shortwave_radiation&fields=visibility&fields=cloud_cover&fields=cloud_base&fields=cloud_ceiling&apikey=$API" )
-
-
-
 echo $JSON |jq '.[] | "\(.observation_time.value) \(.cloud_cover.value) \(.visibility.value) \(.surface_shortwave_radiation.value) \(.cloud_base.value) \(.cloud_ceiling.value) " ' | tr -d '"'|tr " "  "," > /dev/shm/cloudinessC
-#echo $JSON |jq  '.daily[] | "\(.dt) \(.clouds)"'  | tr -d '"'|tr " "  "," > cloudinessC2
+
 
 PCloud=-1
 
-#rm solarOutputC
-echo timestamp,potenial,wattage,predicted%,C% ,Wm2,SSR > Clima.csv 
+
+echo timestamp,potenial,wattage,predicted%,C% ,Wm2,SSR,Visiblity > /dev/shm/Clima.csv 
 while IFS=, read -r Time Cloud  Vis SSR CloudB CloudC
 do
- #echo $Time $Cloud $CloudB $CloudC $Vis $SSR
+
 Time=$(date +%s  -d $Time)
 number=$(date -d @$Time +"%H" )
 number=$(echo "$number *2" | bc )
 #month=$(date -d @$Time +"%m" )
 DAY=$(date -d @$Time +%j )
-#echo $DAY
-# echo  ------- $Vis
+
 ##########  solar panel potential  adjust you panel angle diffences   #######################
 
 if  (( $(bc <<< "$Vis > 16") )) ;then
    Vis=16
-   echo now 16
+   
    fi
    
 if (( $(bc <<< "$Vis < 1") )) ;then
    Vis=1
-   echo now 1
+   
    fi 
 
 ############ Time Extropatation #########################
@@ -45,7 +45,7 @@ then
 PCloud=$Cloud
 PTIME=$Time
 PVis=$Vis
-echo ------
+
 numberA=$(echo "$number - $P_offset" | bc -l )
 potential=$(./panelconf $numberA)
 
@@ -56,21 +56,22 @@ TMP=$(echo 100-$Opac |bc -l)
 TMP=$(echo $TMP/100 |bc -l)
 VisA=$(echo $Vis/16 |bc -l)
 
- # echo "scale=4;(($output*$TMP) * $Vis)/$Wm2" | bc -l
 output=$( echo "scale=4;((($output*$TMP) * $VisA)/$Wm2)" | bc -l)
 pot=$(echo $potential* $output | bc )
 pot=$(printf "%0.2f\n" $pot)
-echo   $numberA,$potential,$pot,$output,$Cloud
 
-echo $Time $potential $pot $output  $Cloud $OUTPUT $SSR  |tr " "  "," >> Clima.csv
+echo   $numberA,$potential,$pot,$output,$Cloud,$Vis
+echo $Time,$potential,$pot,$output,$Cloud,$OUTPUT,$SSR,$Vis  >> /dev/shm/Clima.csv
 
 ##### mqtt send to database ##################
-   mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_W2P' -m "$Time:$pot"
-    mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_W2' -m "$Time:$OUTPUT"
-   mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2' -m "$Time:$Cloud"
-      mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2B' -m "$Time:$CloudB"
-         mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2C' -m "$Time:$CloudC"
-        mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_S2' -m "$Time:$SSR"
+   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_W2P' -m "$Time:$pot"
+    mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_W2' -m "$Time:$OUTPUT"
+   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2' -m "$Time:$Cloud"
+      mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2B' -m "$Time:$CloudB"
+         mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2C' -m "$Time:$CloudC"
+        mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_S2' -m "$Time:$SSR"
+        
+         c=$(echo $c+1 |bc) 
  else
  
   ########### extroplate ###############
@@ -82,23 +83,34 @@ echo $Time $potential $pot $output  $Cloud $OUTPUT $SSR  |tr " "  "," >> Clima.c
 Opac=$(echo $PCloud*$ACO |bc -l)
 TMP=$(echo 100-$Opac |bc -l)
 TMP=$(echo $TMP/100 |bc -l)
-PVis=$(echo $PVis/16 |bc -l)
+PVisA=$(echo $PVis/16 |bc -l)
 numberC=$(echo "$number - ($P_offset*2) " | bc -l )
 potential=$(./panelconf $numberC)
-#echo  $numberC  $potential   ---------C
 
-#echo "scale=4;(($output*$TMP) * $PVis)/$Wm2" | bc -l
-output=$( echo "scale=4;((($output*$TMP) * $PVis)/$Wm2)" | bc -l)
+output=$( echo "scale=4;((($output*$TMP) * $PVisA)/$Wm2)" | bc -l)
 pot=$(echo $potential* $output | bc )
 pot=$(printf "%0.2f\n" $pot)
 
-echo   $numberC,$potential,$pot,$output,$PCloud
+echo   $numberC,$potential,$pot,$output,$PCloud,$PVis
+echo $PTIME,$potential,$pot,$output,$Cloud,$OUTPUT,null,$PVis  >> /dev/shm/Clima.csv
 
-echo $PTIME $potential $pot $output $Cloud  $OUTPUT null   |tr " "  ","  >> Clima.csv
+
+########### end of day ###########
+ 
+if [ $c -eq 47 ]
+then 
+
+cat /dev/shm/Clima.csv > /dev/shm/Clima_EOD.csv 
+fi 
+###################################
+
 ##### mqtt send to database ##################
-  mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_W2P' -m "$PTIME:$pot"
-     mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_W2' -m "$PTIME:$OUTPUT"
-   mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2' -m "$PTIME:$PCloud"
+  mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_W2P' -m "$PTIME:$pot"
+     mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_W2' -m "$PTIME:$OUTPUT"
+   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2' -m "$PTIME:$PCloud"
+   
+   
+     c=$(echo $c+1 |bc)
  
 output=$(python3 -W ignore radiation.py -lon $LON -lat $LAT -t $Time)
 OUTPUT=$(printf "%0.2f\n" $output)
@@ -109,25 +121,23 @@ VisB=$(echo $Vis/16 |bc -l)
 
 numberB=$(echo "$number - $P_offset" | bc -l )
 potential=$(./panelconf $numberB)
-#echo  $numberB $potential   --------B
 
-# echo "scale=4;(($output*$TMP) * $Vis)/$Wm2" | bc -l
 output=$( echo "scale=4;((($output*$TMP) * $VisB)/$Wm2)" | bc -l )
 pot=$(echo $potential* $output | bc -l)
 pot=$(printf "%0.2f\n" $pot)
 
-
-echo $Time $potential $pot $output  $Cloud $OUTPUT $SSR|tr " "  "," >> Clima.csv
+echo   $numberB,$potential,$pot,$output,$Cloud,$Vis
+echo $Time,$potential,$pot,$output,$Cloud,$OUTPUT,$SSR,$Vis >> /dev/shm/Clima.csv
 ##### mqtt send to database ##################
-  mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_W2P' -m "$Time:$pot"
-      mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_W2' -m "$Time:$OUTPUT"
-   mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2' -m "$Time:$Cloud"
-      mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2B' -m "$Time:$CloudB"
-       mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_C2C' -m "$Time:$CloudC"
-    mosquitto_pub -h 192.168.168.251 -t 'incoming/test/mqtt-Energy/power-predict_S2' -m "$Time:$SSR" 
+  mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_W2P' -m "$Time:$pot"
+      mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_W2' -m "$Time:$OUTPUT"
+   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2' -m "$Time:$Cloud"
+      mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2B' -m "$Time:$CloudB"
+       mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_C2C' -m "$Time:$CloudC"
+    mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_S2' -m "$Time:$SSR" 
    
    
- 
+   c=$(echo $c+1 |bc)
 
 PCloud=$Cloud
 PTIME=$Time
@@ -137,5 +147,65 @@ PVis=$Vis
    
  fi
 done < /dev/shm/cloudinessC
+
+
+ awk -F "," ' $4 != "0" {print $2, $3, $4, $6}' /dev/shm/Clima_EOD.csv  |  awk '{if (NR!=1) {print}}' |awk  '$4!="" {print}' | tr " "  "," > /dev/shm/AVG_CLIMA
+cnt=0
+avgPo=0
+avgPob=0
+avgPos=0
+avgMea=0
+
+while IFS=, read -r Po  Mea Pob Pos
+do
+if [ -z "$Po" ]; then Po=0;  fi
+if [ -z "$Mea" ]; then Mea=0;  fi
+if [ -z "$Pob" ]; then Pob=0;  fi
+if [ -z "$Pos" ]; then Pos=0;  fi
+ 
+avgPo=$( echo "scale=2;($avgPo + ($Po*($Pos/$Wm2)))" | bc -l)
+
+avgMea=$( echo "scale=2;($avgMea + $Mea)" | bc -l)
+
+avgPob=$( echo "scale=4;($avgPob + $Pob)" | bc -l)
+
+avgPos=$( echo "scale=2;($avgPos + $Pos)" | bc -l)
+
+cnt=$(echo $cnt+1 |bc)
+
+
+done < /dev/shm/AVG_CLIMA
+
+
+avgPos=$( echo "scale=2;(($avgPos/$cnt)/$Wm2) " | bc -l)
+avgPob=$( echo "scale=4;(($avgPob/$avgPos) / $cnt)" | bc -l)
+
+
+
+avgPo=$( echo "scale=2;(($avgPo / 2))" | bc -l)
+
+avgMea=$( echo "scale=2;($avgMea / 2)" | bc -l)
+
+avgPos=$( echo "scale=2;($avgPo * $avgPob)" | bc -l)
+
+AVG=$( echo "scale=2;($avgMea /$avgPo)" | bc -l)
+
+cnt=$(echo "scale=2;($cnt/2)" |bc -l )
+
+echo Clear Sky Max = $avgPo  > /dev/shm/AVG_CLIMA
+echo Daily Estimate = $avgPos  >> /dev/shm/AVG_CLIMA
+echo Daily Measured = $avgMea  >> /dev/shm/AVG_CLIMA
+echo EST.% of norm  = $avgPob >> /dev/shm/AVG_CLIMA
+echo ACT. % of norm = $AVG >> /dev/shm/AVG_CLIMA
+echo Rounded HRs    = $cnt >> /dev/shm/AVG_CLIMA
+
+##### mqtt send to database ##################
+#   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_A_CL_C' -m "N:$avgPo"
+ #   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_A_E_C' -m "N:$avgPos"
+  #   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_A_P_C' -m "N:$avgPob"
+   #   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_A_M_C' -m "N:$avgMea"
+    #   mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_A_A_C' -m "N:$AVG"
+     #    mosquitto_pub -h $MQTT -t 'incoming/test/mqtt-Energy/power-predict_A_H_C' -m "N:$cnt"
+
 
 
