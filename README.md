@@ -26,5 +26,5 @@ Graphing in Chronograf - you notice that different  apis gave different  cloudco
 
 for me  weather API   and weatherbit are the  most consistanly accurate. but I live in a fairly remote regions that are not generally covered that well by most weather API services .  you can generate  higher accuracy by combining  several  api out puts into one  or  taking  sample from several different  gps  location close to you IE 50km  away from you  and combining into one graph out put 
 
-the CSV  are sent to /dev/shm to save on writing to and SD card since many will likely use in pin pi devices
-it also creates  a 24 hr period  the  Maxmium Clear sky output, the estimated solar production and  measured solar  production  this can vary by 0-5 % also the percentage of normal  clear sky production and  number of hrs ofpower production ( rounded to 1/2 hr
+the CSV  are sent to /dev/shm to save on writing to and SD card since many will likely use in pi devices
+it also creates  a 24 hr period  the  Maxmium Clear sky output, the estimated solar production and  measured solar  production  this can vary by 0-5 % also the percentage of normal  clear sky production and  number of hrs of power production ( rounded to 1/2 hr)
