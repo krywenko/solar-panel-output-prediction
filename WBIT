@@ -8,7 +8,7 @@ ACO=0.80     # average cloud opacitity 0.6 - 0.9
 MQTT=192.168.168.251
 c=0
 
-JSON=$(lynx -dump "https://api.weatherbit.io/v2.0/forecast/hourly?&lat=$LAT&lon=-$LON&key=$API&hours=24" )
+JSON=$(lynx -dump "https://api.weatherbit.io/v2.0/forecast/hourly?&lat=$LAT&lon=-$LON&key=$API&hours=36" )
 echo $JSON |jq ' .data[]  |  "\(.ts) \(.clouds) \(.vis) \(.clouds_hi) \(.clouds_mid) \(.clouds_low)" ' | tr -d '"'|tr " "  "," > /dev/shm/cloudinessW
 
 
