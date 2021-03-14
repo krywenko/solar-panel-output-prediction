@@ -97,7 +97,7 @@ echo $PTIME,$potential,$pot,$output,$Cloud,$OUTPUT,$PVis   >> /dev/shm/OpenW.csv
 if [ $c -eq 47 ]
 then 
 
-cat /dev/shm/VisCross.csv > /dev/shm/VisCross_EOD.csv 
+cat /dev/shm/OpenW.csv > /dev/shm/OpenW_EOD.csv 
 fi 
 ###################################
 
